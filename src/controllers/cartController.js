@@ -1,5 +1,6 @@
 import { cartService } from "../dao/services/carts.service.js"
 //import cartsRepositories from "../../repositories/cartsRepositories.js"
+import { productService } from "../dao/services/products.service.js"
 
 export default class CartController {
 
@@ -39,7 +40,14 @@ export default class CartController {
     async addProductsToCart(req, res) {
         const { cid, pid } = req.params
         const { quantity } = req.body
-    
+        const user = req.session.user
+
+        const prod = await productService.getProductById(pid)
+        if(prod.owner === user.email){
+          req.logger.error("El usuario es el dueño del producto")
+          res.status(403).send({error: "El usuario es el dueño del producto"})
+          return
+        }
         try {
           const updatedCart = await cartService.addProductsToCart(cid, pid, quantity)
           req.logger.debug("Productos agregados al carrito", updatedCart)

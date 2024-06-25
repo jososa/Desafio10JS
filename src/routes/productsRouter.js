@@ -11,12 +11,12 @@ productsRouter.get("/", productController.getAllProducts)
 productsRouter.get("/:pid", productController.getProductById)
 
 //Crear producto
-productsRouter.post("/", authorization("admin"), productController.addProduct)
+productsRouter.post("/", authorization(["admin", "premium"]), productController.addProduct)
 
 //Modificar producto
 productsRouter.put("/:prodId", authorization("admin"), productController.updateProduct)
 
 //Eliminar producto
-productsRouter.delete("/:prodId",authorization("admin"), productController.deleteProduct)
+productsRouter.delete("/:prodId",authorization(["admin", "premium"]), productController.deleteProduct)
 
 export default productsRouter

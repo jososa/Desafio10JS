@@ -6,6 +6,7 @@ import { createHash, isValidPassword } from "../utils/utils.js"
 import passport from "passport"
 import { environment } from "../config/config.js"
 import MailingService from "../dao/services/mail.service.js"
+import { userController } from "../controllers/userController.js"
 
 const sessionRouter = Router()
 
@@ -64,71 +65,11 @@ sessionRouter.get("/logout", (req, res) => {
   })
 })
 
-sessionRouter.get("/current", async (req, res) => {
-  if (!req.user) {
-    res.status(403).send({ status: "Error", message: "Usuario no autenticado" })
-  }
-  const result = new userDTO(req.user)
-  res.status(200).json({ status: "success", payload: result })
-})
+sessionRouter.get("/current", userController.current)
 
 //Restaurar password
-sessionRouter.post("/restore", async (req, res) => {
-  const {email} = req.body
-  if(!email) return
+sessionRouter.post("/restore", userController.sendEmailToRestorePassword)
 
-  const user = await userRepository.findUserByEmail(email)
-  if(!user){
-    return res.status(400).send({status: "error", message:"No se encuentra usuario"})
-  }
-
-  const mailer = new MailingService()
-  await mailer.sendMail({
-    from: "E-commerce Admin",
-    to: user.email,
-    subject: "Restablecer contraseña",
-    html: `<div><h1>Ingrese en el siguiente link para recuperar su contraseña: </h1>
-        <a href="http://localhost:${environment.port}/restorepass/${user._id}"}>Restablezca su contraseña haciendo click aquí</a>
-            </div>`,
-  })
-
-  // const newPass = createHash(password)
-  // const pwd = {password: newPass}
-  // await userRepository.updateUser(user, pwd)
-  res.send({status:"success", message: "Email enviado"})
-})
-
-sessionRouter.post("/:uid/restorepass", async (req, res) => {
-  const { password } = req.body
-  const { uid } = req.params
-
-  if (!password) {
-    return res
-      .status(400)
-      .json({ status: "error", message: "Password requerido" });
-  }
-
-  const user = await userRepository.findUserById(uid);
-  if (!user) {
-    return res
-      .status(400)
-      .json({ status: "error", message: "No se encuentra el usuario" });
-  }
-
-  const passwordMatch = isValidPassword(user, password);
-  if (passwordMatch) {
-    return res.status(400).json({
-      status: "error",
-      message: "La nueva contraseña no puede ser igual a la antigua",
-    });
-  }
-
-  const newPass = createHash(password);
-  const passwordToUpdate = { password: newPass };
-
-  await userRepository.updateUser(user, passwordToUpdate);
-
-  res.status(200).json({ status: "success", message: "Password actualizado" });
-})
+sessionRouter.post("/restorepass/:token", userController.restorePassword)
 
 export default sessionRouter

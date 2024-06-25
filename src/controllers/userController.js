@@ -2,6 +2,12 @@ import { userService } from "../dao/services/users.service.js"
 import { cartService } from "../dao/services/carts.service.js"
 import { createHash, isValidPassword } from "../utils/utils.js"
 import { logger } from "../utils/Logger.js"
+import { environment } from "../config/config.js"
+import UserDTO from "../dao/DTO/userDTO.js"
+import MailingService from "../dao/services/mail.service.js"
+import UserRepository from "../dao/repositories/usersRepositories.js"
+import { generateToken, validateToken } from "../utils/jwt.js"
+import { userRepository } from "../dao/repositories/index.js"
 
 class UserController {
 
@@ -91,29 +97,20 @@ class UserController {
     }
 
     async setUserRole(req, res) {
-        const { uid } = req.params;
-        console.log(uid);
-        const user = await userService.findUserById(uid);
-        console.log(user);
-    
+        const { uid } = req.params
+        const user = await userService.findUserById(uid)
+        
         if (user.role === "admin") {
-          return res
-            .status(400)
-            .json({
-              status: "error",
-              message: "Los admins no pueden cambiar su rol",
-            });
+          return res.status(400).json({ status: "error", message: "Los administradores no pueden cambiar rol" })
         }
     
-        let newRole = null;
+        let newRole = null
         if (user.role === "premium") {
-          newRole = { role: "usuario" };
+          newRole = { role: "usuario" }
         } else if (user.role === "usuario") {
-          newRole = { role: "premium" };
+          newRole = { role: "premium" }
         } else {
-          return res
-            .status(400)
-            .json({ status: "error", message: "Rol no válido" });
+          return res.status(400).json({ status: "error", message: "Rol no válido" });
         }
     
         try {
@@ -124,6 +121,71 @@ class UserController {
             .status(500)
             .json({ status: "error", message: "Error actualizando el rol" });
         }
+      }
+
+      async sendEmailToRestorePassword(req, res) {
+        const { email } = req.body
+
+        if (!email) return
+    
+        const user = await userRepository.findUserByEmail(email)
+        if (!user)
+          return res.status(400).json({ status: "error", message: "Usuario no encontrado" })
+    
+        const token = generateToken(user._id)
+    
+        const mailer = new MailingService()
+        await mailer.sendMail({
+          from: "E-commerce Admin",
+          to: user.email,
+          subject: "Recuperá tu contraseña",
+          html: `<div><h1>¡Hacé click en el siguiente link para recuperar tu contraseña!</h1>
+              <a href="http://localhost:${environment.port}/restorepass/${token}"}>Restaurá tu contraseña haciendo click aquí</a>
+                  </div>`,
+        });
+        res.send({ status: "success", message: "Email enviado" })
+      }
+    
+      async restorePassword(req, res) {
+        const { password } = req.body
+        const { token } = req.params
+        const decodedToken = validateToken(token)
+        if (!decodedToken) {
+          return res.status(400).json({ status: "error", message: "Token invalido" })
+        }
+        const { userId } = decodedToken
+    
+        if (!password) {
+          return res.status(400).json({ status: "error", message: "Password requerido" })
+        }
+    
+        const user = await userRepository.findUserById(userId)
+        if (!user) {
+          return res.status(400).json({ status: "error", message: "No se encuentra el usuario" })
+        }
+    
+        const passwordMatch = isValidPassword(user, password)
+        if (passwordMatch) {
+          return res.status(400).json({
+            status: "error",
+            message: "La nueva contraseña no puede ser igual a la antigua",
+          });
+        }
+    
+        const newPass = createHash(password)
+        const passwordToUpdate = { password: newPass }
+    
+        await userRepository.updateUser(user, passwordToUpdate)
+    
+        res.status(200).json({ status: "success", message: "Password actualizado" })
+      }
+    
+      async current(req, res) {
+        if (!req.user) {
+          res.status(403).json({ status: "Error", message: "No user authenticated" });
+        }
+        const currentUser = new UserDTO(req.user)
+        res.status(200).json({ status: "success", payload: currentUser })
       }
 
 }

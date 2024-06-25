@@ -1,5 +1,7 @@
+//import { error } from "winston"
 import { productService } from "../dao/services/products.service.js"
 import { logger } from "../utils/Logger.js"
+import { userService } from "../dao/services/users.service.js"
 
 export default class ProductController {
 
@@ -16,8 +18,12 @@ export default class ProductController {
     addProduct = async (req, res) => {
       const newProduct = req.body
 
-      if (!newProduct.owner) {
-        newProduct.owner = "admin"
+      const user = req.session.user
+
+      if(user.role !== "premium"){
+        req.logger.error(`El usuario ${user.email} no tiene permisos para crear productos`)
+        res.status(403).send({error: "No tiene permisos para realizar esta operacion"})
+        return
       }
 
       try {
@@ -92,6 +98,14 @@ export default class ProductController {
     deleteProduct = async (req, res) => {
         const productId = req.params.prodId
         try {
+          const user = req.session.user
+          const prod = await productService.getProductById(productId)
+          const own = user.email === prod.owner
+          if(!own){
+            req.logger.error(`El usuario ${user.email} no tiene permisos para eliminar productos`)
+            res.status(403).send({ error: "No tiene permisos para realizar esta operacion" })
+            return
+          }
           await productService.deleteProduct(productId)
           req.logger.debug("Producto eliminado")
           res.json({ status: "Producto eliminado" })

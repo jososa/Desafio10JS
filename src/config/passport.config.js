@@ -4,8 +4,18 @@ import GitHubStrategy from "passport-github2"
 import { environment } from "./config.js"
 import { userController } from "../controllers/userController.js"
 import { userService } from "../dao/services/users.service.js"
+import jwt, { ExtractJwt } from "passport-jwt" 
 
 const LocalStrategy = local.Strategy
+const JWTStrategy = jwt.Strategy
+
+const cookieExtractor = (req) => {
+    let token = null
+    if (req && req.cookies) {
+      token = req.cookies[environment.jwt.COOKIE]
+    }
+    return token
+  }
 
 const initializePassport = () => {
 
@@ -64,6 +74,20 @@ const initializePassport = () => {
             done(error)
         }
     })
+
+    passport.use("current", new JWTStrategy({
+            jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
+            secretOrKey: environment.jwt.SECRET,
+          },
+          async (jwt_payload, done) => {
+            try {
+              return done(null, jwt_payload)
+            } catch (error) {
+              return done(error)
+            }
+          }
+        )
+      )
 
 }
 

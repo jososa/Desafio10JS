@@ -7,6 +7,7 @@ import { productRepository, userRepository } from "../dao/repositories/index.js"
 import { cartRepository } from "../dao/repositories/index.js"
 //import { messageRepository } from "../dao/repositories/messagesRepositories.js"
 import { auth } from "../middlewares/auth.js"
+import { validateToken } from "../utils/jwt.js"
 
 const viewsRouter = Router()
 //const productos = new ProductManager()
@@ -85,9 +86,9 @@ viewsRouter.get("/restore", (req, res) => {
   res.render('restore')
 })
 
-viewsRouter.get("/restorepass/:uid", async (req, res) => {
-  const { uid } = req.params
-  res.render("restorepass", { userId: uid })
+viewsRouter.get("/restorepass/:token", async (req, res) => {
+  const { token } = req.params
+  res.render("restorepass", { userId: token })
 })
 
 export default viewsRouter

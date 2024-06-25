@@ -12,10 +12,9 @@ export const authorization = (role) => {
       }
   
       const userRole = req.user.role
-      if (userRole === role) {
-        next()
-      } else {
+      if (!role.includes(userRole)) 
         return res.status(403).json({ status: "error", message: "No tiene permisos para realizar esta acción" })
-    }
+        next()
+      
   }
 }

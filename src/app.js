@@ -20,6 +20,10 @@ import initializePassport from './config/passport.config.js'
 import { environment } from './config/config.js'
 import { addLogger, logger } from "./utils/Logger.js"
 import userRouter from "./routes/userRouter.js"
+import cookieParser from 'cookie-parser'
+import { swaggerSpecs } from "./utils/swaggerConfig.js"
+import swaggerUiExpress from "swagger-ui-express"
+
 
 //const msg = new messageManager()
 
@@ -66,7 +70,17 @@ app.use(
 initializePassport()
 app.use(passport.initialize())
 app.use(passport.session())
+app.use(cookieParser())
 app.use(addLogger)
+
+//Swagger
+//Route Docs
+app.use("/apidocs",
+    swaggerUiExpress.serve,
+    swaggerUiExpress.setup(swaggerSpecs, {
+      customCss: ".swagger-ui .topbar { display: none }",
+    })
+  )
 
 //Socket
 const socketServer = new Server(server)

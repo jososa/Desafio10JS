@@ -55,6 +55,9 @@ export  default class ProductDao {
             newProduct.code &&
             newProduct.stock
         ){
+          if(!newProduct.owner){
+                newProduct.owner = "admin"
+          }
             newProduct.status = newProduct.status || true
             return await productsModel.create(newProduct)
         } else{

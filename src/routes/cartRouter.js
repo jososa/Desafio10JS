@@ -15,7 +15,7 @@ cartRouter.get("/", cartController.getCarts)
 cartRouter.get("/:cid", cartController.getCartById)
 
 //Agregar producto al carrito
-cartRouter.post("/:cid/product/:pid", authorization("usuario"), cartController.addProductsToCart)
+cartRouter.post("/:cid/product/:pid", authorization(["usuario", "premium"]), cartController.addProductsToCart)
 
 //Modificar carrito
 cartRouter.put('/:cid', cartController.updateProductsInCart)
